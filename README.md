@@ -7,3 +7,4 @@ Example:
 ```bash
 python3 EasyPreload.py -g [group name]
 ```
+- Config the group by a config file
