@@ -4,8 +4,6 @@
 #                                 EasyPreload                                  #
 #                            LD_PRELOAD interceptor                            #
 ################################################################################
-
-from msilib import Directory
 import sys
 import os.path
 import subprocess
@@ -33,7 +31,7 @@ def print_modules():
 		print('* ' + module[:-2])
 
 def check_args():
-	global _module, _stealth, _persist, _32bit, _mode, _module
+	global _module, _stealth, _persist, _32bit, _mode, _module,_group
 	if "--help" in sys.argv or "-h" in sys.argv:
 		print_help()
 		sys.exit(1)
@@ -77,7 +75,6 @@ def get_output_path():
 		return "..."
 	else:
 		return os.getcwd() + '/'
-	return ""
 
 def get_c_to_o():
 	global inputfile, outputfile, _32bit
