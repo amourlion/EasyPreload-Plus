@@ -1,2 +1,2 @@
 # EasyPreload-Plus
-rebuild the Easypreload by python3
+Rebuild the Easypreload by python3
