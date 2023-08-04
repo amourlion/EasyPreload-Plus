@@ -5,6 +5,7 @@
 #                            LD_PRELOAD interceptor                            #
 ################################################################################
 
+from msilib import Directory
 import sys
 import os.path
 import subprocess
@@ -14,6 +15,8 @@ _32bit = False
 _stealth = False
 _persist = False
 _module = ""
+_mode = ""
+_group = ""
 
 def usage():
 	with open('help/usage.txt') as f:
@@ -30,17 +33,18 @@ def print_modules():
 		print('* ' + module[:-2])
 
 def check_args():
-	global _module, _stealth, _persist, _32bit
+	global _module, _stealth, _persist, _32bit, _mode, _module
 	if "--help" in sys.argv or "-h" in sys.argv:
 		print_help()
 		sys.exit(1)
 	if "--list" in sys.argv or "-l" in sys.argv:
 		print_modules()
 		sys.exit(1)
-	if "-m" not in sys.argv:
+	if "-m" not in sys.argv and "-g" not in sys.argv:
 		usage()
 		sys.exit(1)
 	if "-m" in sys.argv:
+		_mode = 'm'
 		try:
 			_module = sys.argv[sys.argv.index('-m') + 1]
 		except IndexError:
@@ -48,6 +52,13 @@ def check_args():
 			sys.exit(1)
 		if not os.path.isfile('modules/' + _module + '.c'):
 			print("Fatal Error: Module does not exist.")
+			sys.exit(1)
+	if "-g" in sys.argv:
+		_mode = 'g'
+		try:
+			_group = sys.argv[sys.argv.index('-g') + 1]
+		except IndexError:
+			usage()
 			sys.exit(1)
 	if "--stealth" in sys.argv or "-s" in sys.argv:
 		_stealth = True
@@ -86,31 +97,71 @@ def get_o_to_so():
 
 check_args()
 
-inputfile = "modules/" + _module + ".c"
-outputfile = get_output_path() + _module
+if _mode == 'm':
 
-print("* preloading " + inputfile)
-print("* saving into " + outputfile)
+	inputfile = "modules/" + _module + ".c"
+	outputfile = get_output_path() + _module
 
-print("* compiling module")
-subprocess.call(get_c_to_o().split())
+	print("* preloading " + inputfile)
+	print("* saving into " + outputfile)
 
-print("* converting to shared library")
-subprocess.call(get_o_to_so().split())
+	print("* compiling module")
+	subprocess.call(get_c_to_o().split())
 
-print("* removing .o")
-subprocess.call(['rm', outputfile + ".o"])
+	print("* converting to shared library")
+	subprocess.call(get_o_to_so().split())
 
-if _persist:
-	print("* adding to ~/.bashrc")
-	homefilename = os.path.expanduser('~') + '/.bashrc'
-	with open(homefilename, "a") as homefile:
-    		homefile.write("export LD_PRELOAD=$LD_PRELOAD:" + outputfile + ".so")
-else:
-	print("* spawning a child shell")
-	current_preload = os.getenv('LD_PRELOAD')
-	new_preload = outputfile + '.so'
-	if current_preload != None:
-		new_preload += ':' + current_preload
-	os.putenv('LD_PRELOAD', new_preload)
-	subprocess.call(['/bin/bash'])
+	print("* removing .o")
+	subprocess.call(['rm', outputfile + ".o"])
+
+	if _persist:
+		print("* adding to ~/.bashrc")
+		homefilename = os.path.expanduser('~') + '/.bashrc'
+		with open(homefilename, "a") as homefile:
+				homefile.write("export LD_PRELOAD=$LD_PRELOAD:" + outputfile + ".so")
+	else:
+		print("* spawning a child shell")
+		current_preload = os.getenv('LD_PRELOAD')
+		new_preload = outputfile + '.so'
+		if current_preload != None:
+			new_preload += ':' + current_preload
+		os.putenv('LD_PRELOAD', new_preload)
+		subprocess.call(['/bin/bash'])
+
+elif _mode == 'g':
+	#TODO:group mode
+	directory = "modules/"+_group+'/'
+	modules = os.listdir(directory)
+	for module in modules:
+		inputfile = directory + module
+		outputfile = get_output_path() + _module
+
+		print("* Mode:Group")
+		print("* Group name:"+_group)
+		print("* preloading " + inputfile)
+		print("* saving into " + outputfile)
+
+		print("* compiling module:"+module)
+		subprocess.call(get_c_to_o().split())
+
+		print("* converting to shared library")
+		subprocess.call(get_o_to_so().split())
+
+		print("* removing .o")
+		subprocess.call(['rm', outputfile + ".o"])
+
+		if _persist:
+			print("* adding to ~/.bashrc")
+			homefilename = os.path.expanduser('~') + '/.bashrc'
+			with open(homefilename, "a") as homefile:
+					homefile.write("export LD_PRELOAD=$LD_PRELOAD:" + outputfile + ".so")
+		else:
+			current_preload = os.getenv('LD_PRELOAD')
+			new_preload = outputfile + '.so'
+			if current_preload != None:
+				new_preload += ':' + current_preload
+			os.putenv('LD_PRELOAD', new_preload)
+	
+	if not _persist:
+		print("* spawning a child shell")
+		subprocess.call(['/bin/bash'])
